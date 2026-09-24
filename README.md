@@ -4,7 +4,7 @@
 
 > **PRIVATE COMMERCIAL SOFTWARE — NOT OPEN SOURCE**
 
-similiaOS is a clinic application built around local SQLite storage, Firebase authentication/synchronization, clinical case-taking workflows, anatomy resources, AI-assisted analysis, prescription/document generation, OCR/PDF tooling and a separate commercial activation system.
+similiaOS is a clinic application built around local SQLite storage, Firebase authentication/synchronization, clinical case-taking workflows, AI-assisted analysis, prescription/document generation, OCR/PDF tooling and a separate commercial activation system.
 
 ## Commercial status
 
@@ -16,7 +16,7 @@ See LICENSE, EULA.md, PRIVATE-REPO-POLICY.md and SECURITY.md.
 
 ## Repository confidentiality — mandatory
 
-**The similiaOS repository must remain private at all times.**
+**The similiaOS-lite repository must remain private at all times.**
 
 The companion similiaOS_Activator repository (GitHub repository: AdminCodeGenerator) must also remain private because it contains the commercial activation/licensing workflow.
 
@@ -25,7 +25,7 @@ GitHub describes private repositories as accessible to the owner and people expl
 ## Two-repository commercial architecture
 
 ### similiaOS
-The main licensed application. It contains the clinic UI, patient/case workflows, SQLite database, examination/vitals, anatomy integration, AI-assisted analysis, prescription/documents, OCR/PDF support and Firebase authentication/sync.
+The main licensed application. It contains the clinic UI, patient/case workflows, SQLite database, examination/vitals, AI-assisted analysis, prescription/documents, OCR/PDF support and Firebase authentication/sync.
 
 ### similiaOS_Activator
 The private administrative licensing application (GitHub repository: AdminCodeGenerator). It contains activation-code generation, customer/license records, expiry management, username/account binding, HWID/device binding and Firebase license administration.
@@ -54,7 +54,7 @@ The activation system can support commercial entitlements such as:
 
 **Clinic Standard** — core clinic workflow, SQLite records, case taking, diagnosis workflow and prescriptions.
 
-**Clinic Professional** — Standard plus advanced anatomy, expanded knowledge/AI resources, advanced documents and additional workflow features.
+**Clinic Professional** — Standard plus expanded knowledge/AI resources, advanced documents and additional workflow features.
 
 **Multi-Device / Multi-Clinic** — entitlement based on a defined device or clinic allowance.
 
@@ -97,7 +97,7 @@ Version 1.0.4 adds sync status, retry/backoff, idempotent sync protocol, conflic
 
 ## Clinical workflow
 
-Version 1.0.4 includes or preserves autosaved case drafts, patient continuity/timeline data, structured examination, vitals, visit states, case templates, anatomy findings, AI-assisted analysis and analysis provenance.
+Version 1.0.4 includes or preserves autosaved case drafts, patient continuity/timeline data, structured examination, vitals, visit states, case templates, AI-assisted analysis and analysis provenance.
 
 Clinical information is sensitive. Production deployments should use strong account passwords, device security, controlled backups, appropriate access permissions and legally appropriate privacy procedures.
 
@@ -130,7 +130,7 @@ npm run build
 
 Then run the actual Windows and Android workflows.
 
-Required commercial tests include startup, SQLite, registration, login, activation, expiry, HWID/device limits, recovery, Firebase restoration, Firebase sync, offline/reconnect/retry, conflicts, prescription printing, PDF export, anatomy/OCR assets, knowledge integrity, AI regression and backup/restore.
+Required commercial tests include startup, SQLite, registration, login, activation, expiry, HWID/device limits, recovery, Firebase restoration, Firebase sync, offline/reconnect/retry, conflicts, prescription printing, PDF export, OCR assets, knowledge integrity, AI regression and backup/restore.
 
 ## GitHub Actions
 
@@ -176,6 +176,6 @@ This documentation is an engineering/product baseline and is not jurisdiction-sp
 
 ## Current release
 
-**similiaOS 1.0.4 — Commercial Private Release**
+**similiaOS-lite 1.0.5 — Commercial Private Release**
 
-The source repository and Admin Code Generator are confidential commercial assets. Customer activation grants application-use rights only; it does not grant repository or source-code rights.
+This Lite edition intentionally excludes the anatomy subsystem and all GLB anatomy models. Licensing/activation remains HC3-compatible with the same public verification key used by the main similiaOS application.
