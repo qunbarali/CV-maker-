@@ -117,6 +117,7 @@ use rusqlite::OptionalExtension;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_vnidrop_share::init())
         .setup(|app| {
             let path = database_path(app.handle()).map_err(std::io::Error::other)?;
             let conn = Connection::open(path).map_err(std::io::Error::other)?;
