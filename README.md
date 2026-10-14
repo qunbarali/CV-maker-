@@ -48,7 +48,7 @@ Package for the current host operating system:
 npm run tauri:build
 ```
 
-The **Manual validation** GitHub Actions workflow can be started manually to run checks on Linux, Windows and macOS. It does not run on pushes or pull requests.
+The **Manual validation** GitHub Actions workflow can be started manually to run checks on Linux, Windows and macOS. The **Android APK build** workflow can be started manually to create an Android APK for the selected CPU architecture and upload it as a workflow artifact. Both workflows are `workflow_dispatch`-only: pushes and pull requests do not start GitHub Actions.
 
 The build creates the platform bundle(s) configured in `src-tauri/tauri.conf.json`. A Windows machine does not automatically produce a signed/notarized macOS release. Build and test Windows, macOS and Linux releases on their target platforms.
 
