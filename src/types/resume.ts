@@ -23,5 +23,5 @@ export const createStarterResume = (): ResumeDocument => ({
   education: [{ id: crypto.randomUUID(), institution: 'Parsons School of Design', qualification: 'BFA, Communication Design', startDate: '2015-09', endDate: '2019-05', details: 'Graduated with honors' }],
   skills: [{ id: crypto.randomUUID(), name: 'Product strategy', level: 90 }, { id: crypto.randomUUID(), name: 'Interaction design', level: 95 }, { id: crypto.randomUUID(), name: 'Prototyping', level: 88 }, { id: crypto.randomUUID(), name: 'Design systems', level: 86 }, { id: crypto.randomUUID(), name: 'User research', level: 82 }],
   projects: [{ id: crypto.randomUUID(), name: 'Open banking dashboard', description: 'Designed a clear, accessible financial overview for first-time investors.' }], certifications: ['Google UX Design Certificate'], languages: ['English — Native', 'Spanish — Conversational'], sectionOrder: ['summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'languages'], customSections: [],
-  design: { accentColor: '#6658d3', fontFamily: 'Inter, Arial, sans-serif', fontSize: 10, lineSpacing: 1.35, marginMm: 15, density: 'balanced' }, updatedAt: new Date().toISOString()
+  design: { accentColor: '#145b73', fontFamily: 'Inter, Arial, sans-serif', fontSize: 10, lineSpacing: 1.35, marginMm: 15, density: 'balanced' }, updatedAt: new Date().toISOString()
 });
