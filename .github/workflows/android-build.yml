@@ -1,0 +1,66 @@
+name: Android APK build
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Android CPU architecture to package
+        type: choice
+        options:
+          - aarch64
+          - armv7
+          - x86_64
+        default: aarch64
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  android:
+    name: Build Android APK (${{ inputs.target }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Set up Java for Android Gradle
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Android SDK components
+        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1"
+      - name: Set up Rust with Android targets
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - name: Install JavaScript dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify native icon assets
+        run: npm run verify:icons
+      - name: Type-check and test
+        run: |
+          npm run typecheck
+          npm test
+      - name: Initialize Tauri Android project
+        run: npm run tauri -- android init
+      - name: Build Android APK
+        run: npm run tauri -- android build --apk --target ${{ inputs.target }}
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: cv-maker-android-${{ inputs.target }}-${{ github.run_number }}
+          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+          retention-days: 14
