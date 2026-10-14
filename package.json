@@ -15,7 +15,8 @@
     "tauri:dev": "tauri dev",
     "check": "npm run typecheck && npm test && npm run build",
     "verify:icons": "node scripts/verify-tauri-icons.mjs",
-    "icons:generate": "tauri icon public/cv-maker-logo.svg --output src-tauri/icons"
+    "icons:generate": "tauri icon public/cv-maker-logo.svg --output src-tauri/icons",
+    "android:build": "npm run icons:generate && npm run verify:icons && tauri android build --apk"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.8.0",
