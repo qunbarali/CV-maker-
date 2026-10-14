@@ -174,16 +174,52 @@ export async function exportDocx(resume: ResumeDocument) {
 }
 
 export async function exportPreviewImage(format: 'png' | 'jpg' = 'png', filename = 'resume') {
-  const node = document.querySelector<HTMLElement>('.resume-paper');
-  if (!node) throw new Error('Resume preview is not available. Open the resume editor first.');
-  const options = { pixelRatio: 2, cacheBust: false, backgroundColor: '#ffffff', skipAutoScale: false };
-  const dataUrl = format === 'png' ? await toPng(node, options) : await toJpeg(node, { ...options, quality: 0.96 });
-  const [meta, encoded] = dataUrl.split(',');
-  const mime = /data:([^;]+)/.exec(meta)?.[1] ?? (format === 'png' ? 'image/png' : 'image/jpeg');
-  const binary = atob(encoded);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  await downloadBlob(new Blob([bytes], { type: mime }), `${safeFilename(filename)}.${format}`);
+  const source = document.querySelector<HTMLElement>('.resume-paper');
+  if (!source) throw new Error('Resume preview is not available. Open the resume editor first.');
+  const clone = source.cloneNode(true) as HTMLElement;
+  const computed = window.getComputedStyle(source);
+  for (const property of ['--accent', '--resume-font-size', '--resume-margin', '--resume-font']) {
+    const value = computed.getPropertyValue(property).trim();
+    if (value) clone.style.setProperty(property, value);
+  }
+  Object.assign(clone.style, {
+    position: 'fixed', left: '-100000px', top: '0', zIndex: '-1',
+    margin: '0', transform: 'none', boxShadow: 'none', borderRadius: '0',
+    background: '#ffffff', color: '#252a36', overflow: 'visible',
+  });
+  clone.style.setProperty('width', '794px', 'important');
+  clone.style.setProperty('max-width', 'none', 'important');
+  clone.style.setProperty('min-height', '0', 'important');
+  clone.style.setProperty('height', 'auto', 'important');
+  clone.style.setProperty('aspect-ratio', 'auto', 'important');
+  clone.style.setProperty('overflow', 'visible', 'important');
+  clone.querySelectorAll<HTMLElement>('.layout-sidebar, .resume-sidebar-layout, .resume-timeline-layout').forEach(element => {
+    element.style.setProperty('min-height', '0', 'important');
+    element.style.setProperty('height', 'auto', 'important');
+    element.style.setProperty('overflow', 'visible', 'important');
+  });
+  document.body.appendChild(clone);
+  try {
+    if (document.fonts?.ready) await document.fonts.ready;
+    await new Promise<void>(resolve => window.requestAnimationFrame(() => resolve()));
+    const options = {
+      width: clone.scrollWidth || 794,
+      height: clone.scrollHeight,
+      pixelRatio: 2,
+      cacheBust: false,
+      backgroundColor: '#ffffff',
+      skipAutoScale: false,
+    };
+    const dataUrl = format === 'png' ? await toPng(clone, options) : await toJpeg(clone, { ...options, quality: 0.96 });
+    const [meta, encoded] = dataUrl.split(',');
+    const mime = /data:([^;]+)/.exec(meta)?.[1] ?? (format === 'png' ? 'image/png' : 'image/jpeg');
+    const binary = atob(encoded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    await downloadBlob(new Blob([bytes], { type: mime }), `${safeFilename(filename)}.${format}`);
+  } finally {
+    clone.remove();
+  }
 }
 
 export async function exportCoverLetterDocx(letter: string, title = 'Cover Letter') {
