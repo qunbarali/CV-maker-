@@ -50,6 +50,8 @@ jobs:
           targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
       - name: Install JavaScript dependencies
         run: npm install --no-audit --no-fund
+      - name: Generate branded native app icons
+        run: npm run icons:generate
       - name: Verify native icon assets
         run: npm run verify:icons
       - name: Type-check and test
