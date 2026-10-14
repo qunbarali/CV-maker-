@@ -1,0 +1,36 @@
+export type TemplateCategory = 'Classic' | 'Modern' | 'Minimal' | 'Creative' | 'Professional' | 'Academic' | 'Executive' | 'Two-column' | 'Timeline' | 'Photo' | 'Colorful' | 'ATS-friendly';
+export interface TemplateDefinition { id: string; name: string; category: TemplateCategory; description: string; accent: string; layout: 'single' | 'sidebar' | 'timeline' | 'editorial'; atsFriendly: boolean; photo: boolean }
+const definitions: Array<[string,string,TemplateCategory,string,string,TemplateDefinition['layout'],boolean,boolean]> = [
+['classic-professional','Classic Professional','Classic','Timeless structure for established careers','#344767','single',true,false],
+['corporate-blue','Corporate Blue','Professional','Confident, polished and easy to scan','#2457a7','single',true,false],
+['traditional-serif','Traditional Serif','Classic','Editorial serif typography with clear hierarchy','#283b35','single',true,false],
+['modern-editorial','Modern Editorial','Modern','Expressive typography with an airy, premium feel','#6658d3','editorial',true,false],
+['modern-sidebar','Modern Sidebar','Two-column','A clear side rail for skills and contact details','#436b91','sidebar',false,false],
+['minimal-clean','Minimal Clean','Minimal','Quiet typography and generous whitespace','#30343b','single',true,false],
+['swiss-minimal','Swiss Minimal','Minimal','Grid-led, precise and beautifully restrained','#df593f','single',true,false],
+['elegant-serif','Elegant Serif','Minimal','A refined serif-led professional profile','#71534a','single',true,false],
+['ats-basic','ATS Basic','ATS-friendly','Plain, highly readable and parsing-conscious','#222b38','single',true,false],
+['ats-compact','ATS Compact','ATS-friendly','Space-efficient for experienced candidates','#374151','single',true,false],
+['ats-modern','ATS Modern','ATS-friendly','Modern details without decorative complexity','#1f766e','single',true,false],
+['executive-dark','Executive Dark','Executive','Strong leadership presence and restrained contrast','#26374b','sidebar',false,false],
+['leadership','Leadership','Executive','Strategic impact and outcomes take center stage','#7a5b34','single',true,false],
+['consultant','Senior Consultant','Executive','Structured expertise and measurable impact','#255d67','single',true,false],
+['academic-cv','Academic CV','Academic','Research, education and publications focused','#293f70','single',true,false],
+['researcher','Researcher','Academic','Clean sections for grants and research experience','#5d527f','single',true,false],
+['teaching','Teaching & Education','Academic','A clear academic and teaching profile','#39705e','single',true,false],
+['creative-portfolio','Creative Portfolio','Creative','Expressive accents for visual and creative roles','#d15d87','editorial',false,true],
+['creative-blocks','Creative Blocks','Creative','Color-blocked identity and modular content','#3f68c8','sidebar',false,true],
+['editorial','Editorial','Creative','Magazine-inspired type and rhythm','#9b5d37','editorial',false,false],
+['balanced-columns','Balanced Columns','Two-column','Equal emphasis on experience and capabilities','#4b647c','sidebar',false,false],
+['compact-columns','Compact Columns','Two-column','Dense information with strong visual grouping','#456e69','sidebar',false,false],
+['career-timeline','Career Timeline','Timeline','A visual path through career milestones','#4d63b4','timeline',false,false],
+['experience-timeline','Experience Timeline','Timeline','Experience-led timeline with crisp dates','#b56b42','timeline',false,false],
+['profile-classic','Profile Classic','Photo','Traditional resume with a profile portrait','#547b8a','sidebar',false,true],
+['modern-profile','Modern Profile','Photo','Contemporary portrait and bold nameplate','#8756a6','editorial',false,true],
+['color-accent','Color Accent','Colorful','A restrained color accent for memorable first impressions','#d25c45','single',true,false],
+['geometric','Geometric','Colorful','Modern geometric detail and modular sections','#5276d0','sidebar',false,false],
+['technical','Technical Specialist','Professional','Technical skills, projects and outcomes prioritized','#167c80','single',true,false],
+['graduate','Graduate Starter','Professional','A confident layout for early-career candidates','#bb7546','single',true,false],
+];
+export const templates: TemplateDefinition[] = definitions.map(([id,name,category,description,accent,layout,atsFriendly,photo])=>({id,name,category,description,accent,layout,atsFriendly,photo}));
+export const templateCategories = ['All', ...Array.from(new Set(templates.map(t=>t.category)))];
