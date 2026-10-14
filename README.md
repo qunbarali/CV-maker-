@@ -52,6 +52,24 @@ The **Manual validation** GitHub Actions workflow can be started manually to run
 
 The build creates the platform bundle(s) configured in `src-tauri/tauri.conf.json`. A Windows machine does not automatically produce a signed/notarized macOS release. Build and test Windows, macOS and Linux releases on their target platforms.
 
+## Premium mobile UI and app branding
+
+The shared brand mark is maintained as `public/cv-maker-logo.svg`. Regenerate platform launcher icons after branding changes with:
+
+```bash
+npm run icons:generate
+```
+
+The mobile shell uses a five-item bottom navigation (Home, My CVs, Templates, Tools and Settings), safe-area-aware top and bottom spacing, and a navy/teal design system. The Android viewport opts into safe-area insets so the app toolbar can remain clear of system status indicators on edge-to-edge devices.
+
+Build a signed/configured local Android APK for a selected target with:
+
+```bash
+npm run android:build -- --target aarch64
+```
+
+Use `armv7` or `x86_64` instead of `aarch64` when appropriate. Keep `keystore.properties` and your `.jks` file out of Git; the repository ignores generated `src-tauri/gen/` content and local signing material.
+
 ## Main features
 
 - **Editor:** personal details, professional summary, work experience, education, skills/proficiency, projects, certifications, languages and unlimited custom sections.
