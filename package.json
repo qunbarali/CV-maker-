@@ -11,10 +11,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "tauri": "tauri",
-    "tauri:build": "npm run verify:icons && tauri build",
+    "tauri:build": "npm run icons:generate && npm run verify:icons && tauri build",
     "tauri:dev": "tauri dev",
     "check": "npm run typecheck && npm test && npm run build",
-    "verify:icons": "node scripts/verify-tauri-icons.mjs"
+    "verify:icons": "node scripts/verify-tauri-icons.mjs",
+    "icons:generate": "tauri icon public/cv-maker-logo.svg --output src-tauri/icons"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.8.0",
