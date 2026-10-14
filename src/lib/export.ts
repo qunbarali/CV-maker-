@@ -98,60 +98,115 @@ function assertRenderedContent(image: HTMLImageElement): void {
 }
 
 export async function exportPdf(resume: ResumeDocument) {
-  const source = document.querySelector<HTMLElement>('.resume-paper');
-  if (!source) throw new Error('Resume preview is not available. Open the resume editor first.');
+  // Build a real text PDF from the resume data. Do not render/capture the preview
+  // or embed a PNG/JPEG: selectable text stays sharp at any zoom and is searchable.
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = Math.max(12, Math.min(24, Number(resume.design?.marginMm) || 16));
+  const contentWidth = pageWidth - margin * 2;
+  const bottom = pageHeight - margin;
+  const accent = /^#[0-9a-f]{6}$/i.test(resume.design?.accentColor || '') ? resume.design.accentColor : '#145b73';
+  const rgb = [parseInt(accent.slice(1, 3), 16), parseInt(accent.slice(3, 5), 16), parseInt(accent.slice(5, 7), 16)] as const;
+  const baseFont = Math.max(8, Math.min(12, Number(resume.design?.fontSize) || 10));
+  let y = margin;
 
-  // Render the clone at the viewport origin; negative coordinates can be clipped.
-  const clone = prepareExportClone(source);
-  document.body.appendChild(clone);
-
-  try {
-    const dimensions = await waitForExportLayout(clone);
-    const dataUrl = await toPng(clone, {
-      width: dimensions.width,
-      height: dimensions.height,
-      pixelRatio: 1.5,
-      cacheBust: false,
-      backgroundColor: '#ffffff',
-      skipAutoScale: false,
-    });
-    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error('Could not render the resume preview for PDF export.'));
-      img.src = dataUrl;
-    });
-    assertRenderedContent(image);
-
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
-    const margin = 10;
-    const pageWidth = 210 - margin * 2;
-    const pageHeight = 297 - margin * 2;
-    const pagePixelHeight = Math.max(1, Math.floor(image.width * pageHeight / pageWidth));
-    // Use the captured content height, not an assumed A4 canvas height, so short
-    // resumes stay on one page and long resumes get only the pages they need.
-    const pageCount = Math.max(1, Math.ceil(image.height / pagePixelHeight));
-    for (let page = 0; page < pageCount; page++) {
-      if (page > 0) pdf.addPage('a4', 'portrait');
-      const sourceY = page * pagePixelHeight;
-      const sliceHeight = Math.min(pagePixelHeight, image.height - sourceY);
-      if (sliceHeight <= 0) continue;
-      const canvas = document.createElement('canvas');
-      canvas.width = image.width;
-      canvas.height = sliceHeight;
-      const context = canvas.getContext('2d');
-      if (!context) throw new Error('Could not prepare a page for PDF export.');
-      context.fillStyle = '#ffffff';
-      context.fillRect(0, 0, canvas.width, canvas.height);
-      context.drawImage(image, 0, sourceY, image.width, sliceHeight, 0, 0, image.width, sliceHeight);
-      const pageImage = canvas.toDataURL('image/png');
-      const sliceHeightMm = pageWidth * sliceHeight / image.width;
-      pdf.addImage(pageImage, 'PNG', margin, margin, pageWidth, sliceHeightMm, undefined, 'FAST');
+  const ensureSpace = (height: number) => {
+    if (y + height > bottom) {
+      pdf.addPage('a4', 'portrait');
+      y = margin;
     }
-    await downloadBlob(pdf.output('blob'), `${safeFilename(resume.title)}.pdf`);
-  } finally {
-    clone.remove();
+  };
+  const addWrapped = (value: string, options: { size?: number; bold?: boolean; color?: [number, number, number]; indent?: number; gapAfter?: number } = {}) => {
+    const text = value.trim();
+    if (!text) return;
+    const size = options.size ?? baseFont;
+    const indent = options.indent ?? 0;
+    pdf.setFont('helvetica', options.bold ? 'bold' : 'normal');
+    pdf.setFontSize(size);
+    const lines = pdf.splitTextToSize(text, contentWidth - indent) as string[];
+    const lineHeight = size * 0.42 * (Number(resume.design?.lineSpacing) || 1.25);
+    for (const line of lines) {
+      ensureSpace(lineHeight);
+      if (options.color) pdf.setTextColor(...options.color);
+      else pdf.setTextColor(38, 43, 52);
+      pdf.text(line, margin + indent, y);
+      y += lineHeight;
+    }
+    y += options.gapAfter ?? 1.2;
+  };
+  const addSection = (title: string) => {
+    if (!title.trim()) return;
+    ensureSpace(11);
+    y += 2;
+    pdf.setDrawColor(...rgb);
+    pdf.setLineWidth(0.45);
+    pdf.line(margin, y + 1, margin + contentWidth, y + 1);
+    y += 5;
+    addWrapped(title.toUpperCase(), { size: 10, bold: true, color: [...rgb] as [number, number, number], gapAfter: 2 });
+  };
+  const addDateLine = (start: string, end: string, current = false) => {
+    const date = [start, current ? 'Present' : end].filter(Boolean).join(' – ');
+    if (date) addWrapped(date, { size: Math.max(8, baseFont - 1), color: [95, 101, 112], gapAfter: 1 });
+  };
+
+  addWrapped(resume.personal.fullName || 'Your Name', { size: 22, bold: true, color: [...rgb] as [number, number, number], gapAfter: 1.5 });
+  if (resume.personal.headline) addWrapped(resume.personal.headline, { size: 12, bold: true, gapAfter: 2 });
+  const contact = [resume.personal.email, resume.personal.phone, resume.personal.location, resume.personal.website].filter(Boolean).join('  |  ');
+  if (contact) addWrapped(contact, { size: 8.5, color: [82, 88, 98], gapAfter: 3 });
+
+  const addSummary = () => { if (resume.summary.trim()) { addSection('Professional Summary'); addWrapped(resume.summary); } };
+  const addExperience = () => {
+    if (!resume.experience.length) return;
+    addSection('Work Experience');
+    for (const item of resume.experience) {
+      addWrapped([item.role, item.company].filter(Boolean).join(' — '), { bold: true, gapAfter: 0.5 });
+      const subline = [item.location, [item.startDate, item.current ? 'Present' : item.endDate].filter(Boolean).join(' – ')].filter(Boolean).join('  |  ');
+      if (subline) addWrapped(subline, { size: Math.max(8, baseFont - 1), color: [95, 101, 112], gapAfter: 1 });
+      for (const bullet of item.bullets.filter(Boolean)) addWrapped('•  ' + bullet, { indent: 2.5, gapAfter: 0.7 });
+      y += 1.5;
+    }
+  };
+  const addEducation = () => {
+    if (!resume.education.length) return;
+    addSection('Education');
+    for (const item of resume.education) {
+      addWrapped([item.qualification, item.institution].filter(Boolean).join(' — '), { bold: true, gapAfter: 0.5 });
+      addDateLine(item.startDate, item.endDate);
+      if (item.details) addWrapped(item.details);
+    }
+  };
+  const addSkills = () => {
+    const skills = resume.skills.map(s => s.name).filter(Boolean);
+    if (skills.length) { addSection('Skills'); addWrapped(skills.join('  •  ')); }
+  };
+  const addProjects = () => {
+    if (!resume.projects.length) return;
+    addSection('Projects');
+    for (const item of resume.projects) {
+      addWrapped(item.name, { bold: true, gapAfter: 0.5 });
+      if (item.description) addWrapped(item.description);
+    }
+  };
+  const addCertifications = () => { if (resume.certifications.length) { addSection('Certifications'); resume.certifications.filter(Boolean).forEach(item => addWrapped('•  ' + item, { indent: 2.5 })); } };
+  const addLanguages = () => { if (resume.languages.length) { addSection('Languages'); addWrapped(resume.languages.join('  •  ')); } };
+  const addCustom = () => { for (const section of resume.customSections) { if (section.title || section.body) { addSection(section.title || 'Additional Information'); if (section.body) addWrapped(section.body); } } };
+  const sectionRenderers: Record<string, () => void> = {
+    summary: addSummary, experience: addExperience, education: addEducation, skills: addSkills,
+    projects: addProjects, certifications: addCertifications, languages: addLanguages, custom: addCustom,
+  };
+  const seen = new Set<string>();
+  for (const section of resume.sectionOrder || []) {
+    if (section in sectionRenderers && !seen.has(section)) {
+      seen.add(section);
+      sectionRenderers[section]();
+    }
   }
+  for (const [key, render] of Object.entries(sectionRenderers)) {
+    if (!seen.has(key)) render();
+  }
+
+  await downloadBlob(pdf.output('blob'), `${safeFilename(resume.title)}.pdf`);
 }
 
 export async function exportCoverLetterPdf(letter: string, title = 'Cover Letter') {
