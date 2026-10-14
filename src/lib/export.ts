@@ -32,12 +32,12 @@ function mimeForFilename(filename: string) {
   return 'application/octet-stream';
 }
 
-export async function exportPdf(resume: ResumeDocument) {
-  const source = document.querySelector<HTMLElement>('.resume-paper');
-  if (!source) throw new Error('Resume preview is not available. Open the resume editor first.');
-
-  // Capture an isolated, visible A4-width clone. On Android the live preview is
-  // often hidden while the user edits; rasterizing that hidden tree creates a blank PDF.
+/**
+ * html-to-image rasterizes a DOM subtree through SVG foreignObject. A large
+ * negative left offset can clip that subtree and yield a valid but white PDF.
+ * Keep the clone at the viewport origin and explicitly make it renderable.
+ */
+function prepareExportClone(source: HTMLElement): HTMLElement {
   const clone = source.cloneNode(true) as HTMLElement;
   const computed = window.getComputedStyle(source);
   for (const property of ['--accent', '--resume-font-size', '--resume-margin', '--resume-font']) {
@@ -45,38 +45,71 @@ export async function exportPdf(resume: ResumeDocument) {
     if (value) clone.style.setProperty(property, value);
   }
   Object.assign(clone.style, {
-    position: 'fixed',
-    left: '-100000px',
-    top: '0',
-    zIndex: '-1',
-    margin: '0',
-    transform: 'none',
-    boxShadow: 'none',
-    borderRadius: '0',
-    background: '#ffffff',
-    color: '#252a36',
-    overflow: 'visible',
+    position: 'fixed', left: '0', top: '0', zIndex: '-1', margin: '0',
+    transform: 'none', boxShadow: 'none', borderRadius: '0',
+    background: '#ffffff', color: '#252a36', overflow: 'visible',
+    display: 'block', visibility: 'visible', opacity: '1', pointerEvents: 'none',
   });
   clone.style.setProperty('width', '794px', 'important');
   clone.style.setProperty('max-width', 'none', 'important');
+  clone.style.setProperty('min-width', '0', 'important');
   clone.style.setProperty('min-height', '0', 'important');
   clone.style.setProperty('height', 'auto', 'important');
+  clone.style.setProperty('max-height', 'none', 'important');
   clone.style.setProperty('aspect-ratio', 'auto', 'important');
   clone.style.setProperty('overflow', 'visible', 'important');
   clone.style.setProperty('box-sizing', 'border-box', 'important');
   clone.querySelectorAll<HTMLElement>('.layout-sidebar, .resume-sidebar-layout, .resume-timeline-layout').forEach(element => {
     element.style.setProperty('min-height', '0', 'important');
     element.style.setProperty('height', 'auto', 'important');
+    element.style.setProperty('max-height', 'none', 'important');
     element.style.setProperty('overflow', 'visible', 'important');
   });
+  return clone;
+}
+
+async function waitForExportLayout(element: HTMLElement): Promise<{ width: number; height: number }> {
+  if (document.fonts?.ready) await document.fonts.ready;
+  await new Promise<void>(resolve => window.requestAnimationFrame(() => resolve()));
+  return {
+    width: Math.ceil(Math.max(element.scrollWidth, element.getBoundingClientRect().width, 794)),
+    height: Math.ceil(Math.max(element.scrollHeight, element.getBoundingClientRect().height, 100)),
+  };
+}
+
+function assertRenderedContent(image: HTMLImageElement): void {
+  if (!image.naturalWidth || !image.naturalHeight) {
+    throw new Error('The resume preview could not be rendered. No PDF was exported.');
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.min(image.naturalWidth, 320);
+  canvas.height = Math.min(image.naturalHeight, 320);
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('Could not validate the rendered resume. No PDF was exported.');
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  let visiblePixels = 0;
+  for (let i = 0; i < pixels.length; i += 4) {
+    if (pixels[i + 3] > 20 && (pixels[i] < 238 || pixels[i + 1] < 238 || pixels[i + 2] < 238)) {
+      if (++visiblePixels >= 12) return;
+    }
+  }
+  throw new Error('The PDF export was stopped because the captured resume appears blank. Reopen the preview and try again.');
+}
+
+export async function exportPdf(resume: ResumeDocument) {
+  const source = document.querySelector<HTMLElement>('.resume-paper');
+  if (!source) throw new Error('Resume preview is not available. Open the resume editor first.');
+
+  // Render the clone at the viewport origin; negative coordinates can be clipped.
+  const clone = prepareExportClone(source);
   document.body.appendChild(clone);
 
   try {
-    if (document.fonts?.ready) await document.fonts.ready;
-    await new Promise<void>(resolve => window.requestAnimationFrame(() => resolve()));
+    const dimensions = await waitForExportLayout(clone);
     const dataUrl = await toPng(clone, {
-      width: clone.scrollWidth || 794,
-      height: clone.scrollHeight,
+      width: dimensions.width,
+      height: dimensions.height,
       pixelRatio: 1.5,
       cacheBust: false,
       backgroundColor: '#ffffff',
@@ -88,7 +121,7 @@ export async function exportPdf(resume: ResumeDocument) {
       img.onerror = () => reject(new Error('Could not render the resume preview for PDF export.'));
       img.src = dataUrl;
     });
-    if (!image.width || !image.height) throw new Error('The resume preview has no printable content.');
+    assertRenderedContent(image);
 
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
     const margin = 10;
@@ -176,35 +209,13 @@ export async function exportDocx(resume: ResumeDocument) {
 export async function exportPreviewImage(format: 'png' | 'jpg' = 'png', filename = 'resume') {
   const source = document.querySelector<HTMLElement>('.resume-paper');
   if (!source) throw new Error('Resume preview is not available. Open the resume editor first.');
-  const clone = source.cloneNode(true) as HTMLElement;
-  const computed = window.getComputedStyle(source);
-  for (const property of ['--accent', '--resume-font-size', '--resume-margin', '--resume-font']) {
-    const value = computed.getPropertyValue(property).trim();
-    if (value) clone.style.setProperty(property, value);
-  }
-  Object.assign(clone.style, {
-    position: 'fixed', left: '-100000px', top: '0', zIndex: '-1',
-    margin: '0', transform: 'none', boxShadow: 'none', borderRadius: '0',
-    background: '#ffffff', color: '#252a36', overflow: 'visible',
-  });
-  clone.style.setProperty('width', '794px', 'important');
-  clone.style.setProperty('max-width', 'none', 'important');
-  clone.style.setProperty('min-height', '0', 'important');
-  clone.style.setProperty('height', 'auto', 'important');
-  clone.style.setProperty('aspect-ratio', 'auto', 'important');
-  clone.style.setProperty('overflow', 'visible', 'important');
-  clone.querySelectorAll<HTMLElement>('.layout-sidebar, .resume-sidebar-layout, .resume-timeline-layout').forEach(element => {
-    element.style.setProperty('min-height', '0', 'important');
-    element.style.setProperty('height', 'auto', 'important');
-    element.style.setProperty('overflow', 'visible', 'important');
-  });
+  const clone = prepareExportClone(source);
   document.body.appendChild(clone);
   try {
-    if (document.fonts?.ready) await document.fonts.ready;
-    await new Promise<void>(resolve => window.requestAnimationFrame(() => resolve()));
+    const dimensions = await waitForExportLayout(clone);
     const options = {
-      width: clone.scrollWidth || 794,
-      height: clone.scrollHeight,
+      width: dimensions.width,
+      height: dimensions.height,
       pixelRatio: 2,
       cacheBust: false,
       backgroundColor: '#ffffff',
