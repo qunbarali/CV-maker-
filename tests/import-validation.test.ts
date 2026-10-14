@@ -25,10 +25,11 @@ describe('resume backup normalization', () => {
   });
 
   it('bounds design values and discards unsafe color/photo data', () => {
+    const starter = createStarterResume();
     const imported = normalizeResumeBackup({
       personal: { photoDataUrl: 'javascript:alert(1)', photoPositionX: 999 },
       design: { accentColor: 'red', fontSize: 500, lineSpacing: 0, marginMm: 500 },
-    }, createStarterResume());
+    }, starter);
     expect(imported.personal.photoDataUrl).toBeUndefined();
     expect(imported.personal.photoPositionX).toBe(100);
     expect(imported.design.accentColor).toBe(starter.design.accentColor);
