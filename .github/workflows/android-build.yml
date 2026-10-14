@@ -60,6 +60,8 @@ jobs:
           npm test
       - name: Initialize Tauri Android project
         run: npm run tauri -- android init
+      - name: Sync branded icon into initialized Android resources
+        run: npm run icons:sync-android
       - name: Build Android APK
         run: npm run tauri -- android build --apk --target ${{ inputs.target }}
       - name: Upload APK
