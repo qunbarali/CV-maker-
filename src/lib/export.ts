@@ -1,15 +1,91 @@
 import { Document, HeadingLevel, Packer, Paragraph, TextRun } from 'docx';
+import { isTauri } from '@tauri-apps/api/core';
+import { share } from '@vnidrop/tauri-plugin-share';
+import { jsPDF } from 'jspdf';
 import { toJpeg, toPng } from 'html-to-image';
 import type { ResumeDocument } from '../types/resume';
 import { safeFilename } from './storage';
 
-function downloadBlob(blob: Blob, filename: string) {
+async function downloadBlob(blob: Blob, filename: string) {
+  // Android must hand the real file to the native Sharesheet. A WebView download
+  // is not a reliable way to create or print a PDF/DOCX on Android.
+  if (isTauri() && /Android/i.test(navigator.userAgent)) {
+    const file = new File([blob], filename, { type: blob.type || mimeForFilename(filename) });
+    await share({ title: filename, files: [file] });
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = filename;
   anchor.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function mimeForFilename(filename: string) {
+  const extension = filename.toLowerCase().split('.').pop();
+  if (extension === 'pdf') return 'application/pdf';
+  if (extension === 'docx') return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  if (extension === 'png') return 'image/png';
+  if (extension === 'jpg' || extension === 'jpeg') return 'image/jpeg';
+  if (extension === 'txt') return 'text/plain;charset=utf-8';
+  return 'application/octet-stream';
+}
+
+export async function exportPdf(resume: ResumeDocument) {
+  const node = document.querySelector<HTMLElement>('.resume-paper');
+  if (!node) throw new Error('Resume preview is not available. Open the resume editor first.');
+  const dataUrl = await toPng(node, {
+    pixelRatio: 1.5,
+    cacheBust: false,
+    backgroundColor: '#ffffff',
+    skipAutoScale: false,
+  });
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Could not render the resume preview for PDF export.'));
+    img.src = dataUrl;
+  });
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+  const margin = 10;
+  const pageWidth = 210 - margin * 2;
+  const pageHeight = 297 - margin * 2;
+  const imageHeight = pageWidth * image.height / image.width;
+  const pageCount = Math.max(1, Math.ceil(imageHeight / pageHeight));
+  for (let page = 0; page < pageCount; page++) {
+    if (page > 0) pdf.addPage('a4', 'portrait');
+    // Reusing the full rendered page at a negative offset lets jsPDF clip each
+    // slice to the A4 page without shrinking a long CV to unreadable text.
+    pdf.addImage(dataUrl, 'PNG', margin, margin - page * pageHeight, pageWidth, imageHeight, undefined, 'FAST');
+  }
+  const filename = `${safeFilename(resume.title)}.pdf`;
+  await downloadBlob(pdf.output('blob'), filename);
+}
+
+export async function exportCoverLetterPdf(letter: string, title = 'Cover Letter') {
+  const text = letter.replace(/\\r\\n?/g, '\\n').trim();
+  if (!text) throw new Error('Write a cover letter before exporting it.');
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+  const left = 20;
+  const right = 20;
+  const top = 22;
+  const bottom = 20;
+  const width = 210 - left - right;
+  const lines = pdf.splitTextToSize(text, width);
+  let y = top;
+  pdf.setFont('times', 'normal');
+  pdf.setFontSize(11);
+  const lineHeight = 5.5;
+  for (const line of lines) {
+    if (y + lineHeight > 297 - bottom) {
+      pdf.addPage('a4', 'portrait');
+      y = top;
+    }
+    pdf.text(line, left, y);
+    y += lineHeight;
+  }
+  await downloadBlob(pdf.output('blob'), `${safeFilename(title)}.pdf`);
 }
 
 export async function exportDocx(resume: ResumeDocument) {
@@ -36,7 +112,7 @@ export async function exportDocx(resume: ResumeDocument) {
   if (resume.languages.length) { heading('Languages'); children.push(new Paragraph(resume.languages.join(' • '))); }
   for (const section of resume.customSections) { heading(section.title); if (section.body) children.push(new Paragraph(section.body)); }
   const doc = new Document({ creator: 'CV Maker', title: resume.title, description: 'Offline CV Maker export', sections: [{ properties: { page: { margin: { top: 720, right: 850, bottom: 720, left: 850 } } }, children }] });
-  downloadBlob(await Packer.toBlob(doc), `${safeFilename(resume.title)}.docx`);
+  await downloadBlob(await Packer.toBlob(doc), `${safeFilename(resume.title)}.docx`);
 }
 
 export async function exportPreviewImage(format: 'png' | 'jpg' = 'png', filename = 'resume') {
@@ -49,7 +125,7 @@ export async function exportPreviewImage(format: 'png' | 'jpg' = 'png', filename
   const binary = atob(encoded);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  downloadBlob(new Blob([bytes], { type: mime }), `${safeFilename(filename)}.${format}`);
+  await downloadBlob(new Blob([bytes], { type: mime }), `${safeFilename(filename)}.${format}`);
 }
 
 export async function exportCoverLetterDocx(letter: string, title = 'Cover Letter') {
@@ -65,5 +141,5 @@ export async function exportCoverLetterDocx(letter: string, title = 'Cover Lette
     description: 'Offline cover letter export',
     sections: [{ properties: { page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } }, children: paragraphs }],
   });
-  downloadBlob(await Packer.toBlob(doc), `${safeFilename(title)}.docx`);
+  await downloadBlob(await Packer.toBlob(doc), `${safeFilename(title)}.docx`);
 }
