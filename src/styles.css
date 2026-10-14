@@ -175,7 +175,7 @@ button{touch-action:manipulation}
   .skill-edit-row{grid-template-columns:minmax(0,1fr) minmax(54px,76px) 30px 26px;gap:5px}
   .language-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
   .custom-section{overflow-wrap:anywhere}
-  .design-popover{right:8px;left:8px;width:auto;max-width:none}
+  .design-popover{right:8px;left:8px;width:auto;max-width:none;max-height:calc(100dvh - 150px);overflow-y:auto;overscroll-behavior:contain}
   .field input,.field textarea,.field select,.form-input,.form-textarea,.cover-textarea,.job-textarea,.custom-section input,.custom-section textarea,.language-row input,.skill-edit-row input{font-size:16px;max-width:100%}
   .section-tabs{max-width:100%;overscroll-behavior-x:contain}
   .category-row{max-width:calc(100% + 28px);overscroll-behavior-x:contain}
