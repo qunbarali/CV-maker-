@@ -51,13 +51,24 @@ export async function exportPdf(resume: ResumeDocument) {
   const margin = 10;
   const pageWidth = 210 - margin * 2;
   const pageHeight = 297 - margin * 2;
-  const imageHeight = pageWidth * image.height / image.width;
-  const pageCount = Math.max(1, Math.ceil(imageHeight / pageHeight));
+  const pagePixelHeight = Math.max(1, Math.floor(image.width * pageHeight / pageWidth));
+  const pageCount = Math.max(1, Math.ceil(image.height / pagePixelHeight));
   for (let page = 0; page < pageCount; page++) {
     if (page > 0) pdf.addPage('a4', 'portrait');
-    // Reusing the full rendered page at a negative offset lets jsPDF clip each
-    // slice to the A4 page without shrinking a long CV to unreadable text.
-    pdf.addImage(dataUrl, 'PNG', margin, margin - page * pageHeight, pageWidth, imageHeight, undefined, 'FAST');
+    // Crop each page slice before embedding it so page boundaries do not overlap.
+    const sourceY = page * pagePixelHeight;
+    const sliceHeight = Math.min(pagePixelHeight, image.height - sourceY);
+    const canvas = document.createElement('canvas');
+    canvas.width = image.width;
+    canvas.height = sliceHeight;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Could not prepare a page for PDF export.');
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, sourceY, image.width, sliceHeight, 0, 0, image.width, sliceHeight);
+    const pageImage = canvas.toDataURL('image/png');
+    const sliceHeightMm = pageWidth * sliceHeight / image.width;
+    pdf.addImage(pageImage, 'PNG', margin, margin, pageWidth, sliceHeightMm, undefined, 'FAST');
   }
   const filename = `${safeFilename(resume.title)}.pdf`;
   await downloadBlob(pdf.output('blob'), filename);
