@@ -31,7 +31,7 @@ describe('resume backup normalization', () => {
     }, createStarterResume());
     expect(imported.personal.photoDataUrl).toBeUndefined();
     expect(imported.personal.photoPositionX).toBe(100);
-    expect(imported.design.accentColor).toBe('#6658d3');
+    expect(imported.design.accentColor).toBe(starter.design.accentColor);
     expect(imported.design.fontSize).toBe(12);
     expect(imported.design.lineSpacing).toBe(1);
     expect(imported.design.marginMm).toBe(24);
