@@ -12,3 +12,9 @@ Thumbs.db
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+
+# Generated Tauri mobile project and local Android signing material
+src-tauri/gen/
+*.jks
+*.keystore
+keystore.properties
