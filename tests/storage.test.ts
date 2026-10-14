@@ -23,6 +23,7 @@ describe('database health validation', () => {
   it('rejects integrity errors, unknown schemas and invalid counts', () => {
     expect(isDatabaseHealthy({ ...healthy, integrity: 'corrupt' })).toBe(false);
     expect(isDatabaseHealthy({ ...healthy, schemaVersion: 0 })).toBe(false);
+    expect(isDatabaseHealthy({ ...healthy, schemaVersion: 1.5 })).toBe(false);
     expect(isDatabaseHealthy({ ...healthy, resumeCount: -1 })).toBe(false);
     expect(isDatabaseHealthy(null)).toBe(false);
   });

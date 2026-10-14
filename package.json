@@ -11,9 +11,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "tauri": "tauri",
-    "tauri:build": "tauri build",
+    "tauri:build": "npm run verify:icons && tauri build",
     "tauri:dev": "tauri dev",
-    "check": "npm run typecheck && npm test && npm run build"
+    "check": "npm run typecheck && npm test && npm run build",
+    "verify:icons": "node scripts/verify-tauri-icons.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.8.0",

@@ -10,8 +10,30 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [{ "title": "CV Maker — Resume Studio", "width": 1440, "height": 960, "minWidth": 900, "minHeight": 650 }],
-    "security": { "csp": "default-src 'self'; img-src 'self' asset: data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src ipc: http://ipc.localhost" }
+    "windows": [
+      {
+        "title": "CV Maker — Resume Studio",
+        "width": 1440,
+        "height": 960,
+        "minWidth": 900,
+        "minHeight": 650
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src ipc: http://ipc.localhost"
+    }
   },
-  "bundle": { "active": true, "targets": "all", "category": "Productivity", "shortDescription": "Offline resume and CV maker" }
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Productivity",
+    "shortDescription": "Offline resume and CV maker",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
 }

@@ -12,3 +12,7 @@
 .cover-export-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;align-items:start}
 .cover-export-actions .full-button{margin-top:9px;min-width:0}
 @media(max-width:520px){.cover-export-actions{grid-template-columns:1fr}}
+
+
+.storage-error-backdrop{z-index:1000}.storage-error-detail{overflow-wrap:anywhere;padding:10px 12px;border-radius:8px;background:var(--canvas);border:1px solid var(--line);font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px!important}
+.workspace-loading-backdrop{z-index:900}.workspace-loading-modal{text-align:center}.workspace-loading-modal .tool-icon{margin:0 auto 14px}

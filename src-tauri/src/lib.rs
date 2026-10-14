@@ -1,5 +1,5 @@
 use rusqlite::{params, Connection};
-use std::{fs, path::PathBuf, sync::Mutex};
+use std::{collections::HashSet, fs, path::PathBuf, sync::Mutex};
 use tauri::{Manager, State};
 
 struct AppDatabase(Mutex<Connection>);
@@ -44,21 +44,53 @@ fn load_resumes(db: State<'_, AppDatabase>) -> Result<Vec<serde_json::Value>, St
 
 #[tauri::command]
 fn replace_resumes(resumes: Vec<serde_json::Value>, db: State<'_, AppDatabase>) -> Result<(), String> {
-    if resumes.len() > 500 { return Err("Too many documents to save in one operation".into()); }
-    let conn = db.0.lock().map_err(|_| "Database lock is unavailable".to_string())?;
-    let tx = conn.unchecked_transaction().map_err(|e| e.to_string())?;
-    tx.execute("DELETE FROM resumes", []).map_err(|e| e.to_string())?;
+    const MAX_DOCUMENTS: usize = 500;
+    const MAX_DOCUMENT_BYTES: usize = 8 * 1024 * 1024;
+    const MAX_TOTAL_BYTES: usize = 64 * 1024 * 1024;
+    if resumes.len() > MAX_DOCUMENTS {
+        return Err(format!("Too many documents to save in one operation (maximum {MAX_DOCUMENTS})"));
+    }
+
+    // Validate the complete replacement before deleting anything. This also prevents
+    // duplicate primary keys or oversized imported photos from creating a failed save.
+    let mut seen_ids = HashSet::with_capacity(resumes.len());
+    let mut total_bytes = 0usize;
+    let mut rows = Vec::with_capacity(resumes.len());
     for item in resumes {
-        let id = item.get("id").and_then(|v| v.as_str()).ok_or("Resume is missing its id")?;
+        let id = item.get("id").and_then(|v| v.as_str()).filter(|s| !s.trim().is_empty() && s.len() <= 200)
+            .ok_or("Resume is missing a valid id")?.to_owned();
+        if !seen_ids.insert(id.clone()) {
+            return Err("The document list contains duplicate IDs; no documents were changed".into());
+        }
+        let document_id = item.get("document").and_then(|v| v.get("id")).and_then(|v| v.as_str())
+            .ok_or("Resume is missing its document payload or document id")?;
+        if document_id != id {
+            return Err("A resume ID does not match its document payload; no documents were changed".into());
+        }
         let title = item.get("title").and_then(|v| v.as_str()).unwrap_or("Untitled Resume");
+        if title.len() > 160 { return Err("A resume title exceeds the 160-character storage limit".into()); }
         let updated_at = item.get("updatedAt").and_then(|v| v.as_str()).unwrap_or("");
+        if updated_at.len() > 100 { return Err("A resume timestamp exceeds the storage limit".into()); }
         let payload = serde_json::to_string(&item).map_err(|e| e.to_string())?;
+        if payload.len() > MAX_DOCUMENT_BYTES {
+            return Err("A resume is too large to store safely (maximum 8 MiB per document)".into());
+        }
+        total_bytes = total_bytes.checked_add(payload.len()).ok_or("Workspace size overflow")?;
+        if total_bytes > MAX_TOTAL_BYTES {
+            return Err("The workspace is too large to store in one operation (maximum 64 MiB)".into());
+        }
+        rows.push((id, title.to_owned(), updated_at.to_owned(), payload));
+    }
+
+    let mut conn = db.0.lock().map_err(|_| "Database lock is unavailable".to_string())?;
+    let tx = conn.transaction().map_err(|e| e.to_string())?;
+    tx.execute("DELETE FROM resumes", []).map_err(|e| e.to_string())?;
+    for (id, title, updated_at, payload) in rows {
         tx.execute("INSERT INTO resumes (id, title, updated_at, payload) VALUES (?1, ?2, ?3, ?4)", params![id, title, updated_at, payload]).map_err(|e| e.to_string())?;
     }
     tx.commit().map_err(|e| e.to_string())?;
     Ok(())
 }
-
 #[tauri::command]
 fn delete_resume(id: String, db: State<'_, AppDatabase>) -> Result<(), String> {
     let conn = db.0.lock().map_err(|_| "Database lock is unavailable".to_string())?;

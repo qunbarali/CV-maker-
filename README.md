@@ -161,3 +161,22 @@ The diagnostics panel is now available from the design settings popover. It repo
 - Added unit cases for workspace deduplication, same-title revisions and non-destructive capacity limits.
 
 **Final verification status:** source edits and configuration syntax have been reviewed, but this environment could not install npm dependencies and does not have Cargo/Rust installed. TypeScript diagnostics are therefore blocked by missing React/Tauri/export dependencies; Vitest and the native desktop build have not run. Treat this ZIP as a release-candidate source package, not a verified installer. Run the documented `npm run check` and `npm run tauri:build` commands on a Windows development machine before relying on it for important CV data.
+
+
+## Native application icons and storage safeguards
+
+- Tauri bundle icons are checked into `src-tauri/icons/` for Windows (`icon.ico`), macOS (`icon.icns`) and Linux PNG bundles. The icon paths are explicitly declared in `src-tauri/tauri.conf.json` to avoid default `icon.ico` lookup failures.
+- Native SQLite is authoritative in desktop mode. A native read/parse failure now pauses editing instead of falling back to stale browser data and potentially overwriting the database.
+- Workspace writes validate document IDs, duplicate IDs, per-document size and total size before starting the replacement transaction.
+- Backup deduplication ignores generated IDs and timestamps recursively, including nested experience, education and skill IDs.
+
+## Phase 11 — source audit and native icon fix
+
+- Added explicit Windows, macOS and Linux icon assets and declared all five icon paths in the Tauri bundle configuration. `npm run tauri:build` validates icon presence and file headers before invoking Tauri.
+- Changed desktop storage hydration so native SQLite errors do not fall back to stale browser storage. The editor stays blocked until CVs and settings load successfully, preventing startup autosave from replacing native data with cached state.
+- Corrected empty-database hydration so stale browser-cache CVs are not silently restored into an empty native database.
+- Validated the full resume replacement before beginning the SQLite transaction, including unique/matching document IDs and per-document/workspace size limits.
+- Fixed workspace backup deduplication to ignore generated IDs/timestamps recursively, including nested experience, education and skill records.
+- Added tests for nested-ID deduplication and non-integer database schema versions.
+
+**Verification note:** TypeScript/TSX syntax transpilation, JSON configuration parsing, icon file checks, whitespace checks, and all 19 current unit-test cases via a dependency-free local harness passed. The official Vitest run, full TypeScript type-check, and native Rust/Tauri build remain unverified because npm dependency installation timed out and Cargo is not installed in this environment. The local harness is not a substitute for Vitest or a native build.

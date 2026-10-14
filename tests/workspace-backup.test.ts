@@ -21,6 +21,14 @@ describe('workspace backup restore merge', () => {
     expect(mergeWorkspaceDocuments([first], [duplicate])).toHaveLength(1);
   });
 
+  it('deduplicates equivalent resumes after nested item IDs are regenerated during import', () => {
+    const first = saved('Designer CV', 'Taylor', 'Built products', 'one');
+    first.document.experience = [{ id: 'experience-old', role: 'Designer', company: 'Studio', location: '', startDate: '2020-01', endDate: '', current: true, bullets: ['Built products'] }];
+    const imported = saved('Designer CV', 'Taylor', 'Built products', 'two');
+    imported.document.experience = [{ ...first.document.experience[0], id: 'experience-new' }];
+    expect(mergeWorkspaceDocuments([imported], [first])).toHaveLength(1);
+  });
+
   it('preserves distinct versions even when title and name match', () => {
     const original = saved('Designer CV', 'Taylor', 'Built products', 'one');
     const revised = saved('Designer CV', 'Taylor', 'Led a redesign', 'two');

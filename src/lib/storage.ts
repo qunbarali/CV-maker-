@@ -29,7 +29,7 @@ export async function checkDatabaseHealth(): Promise<DatabaseHealth | null> {
 }
 
 export function isDatabaseHealthy(health: DatabaseHealth | null): boolean {
-  return health !== null && health.integrity === 'ok' && health.schemaVersion >= 1 &&
+  return health !== null && health.integrity === 'ok' && Number.isSafeInteger(health.schemaVersion) && health.schemaVersion >= 1 &&
     Number.isSafeInteger(health.resumeCount) && health.resumeCount >= 0 &&
     Number.isSafeInteger(health.settingsCount) && health.settingsCount >= 0;
 }
@@ -49,17 +49,28 @@ export function loadResumes(): SavedResume[] {
 
 /** Desktop builds use the app-data SQLite database; the browser preview keeps a localStorage fallback. */
 export async function loadResumesDurable(): Promise<SavedResume[]> {
-  if (isTauri()) {
-    try {
-      const native = await invoke<unknown[]>('load_resumes');
-      const parsed = validSavedResumes(native);
-      try { localStorage.setItem(KEY, JSON.stringify(parsed)); } catch { /* SQLite remains the source of truth on desktop. */ }
-      return parsed;
-    } catch (error) {
-      console.error('Could not read the local CV database; falling back to browser storage.', error);
+  if (!isTauri()) return loadResumes();
+
+  // Native SQLite is authoritative in the desktop app. Never silently fall back to
+  // localStorage here: a later save could otherwise overwrite a valid database with
+  // an old browser cache after a transient SQLite read failure.
+  const native = await invoke<unknown>('load_resumes');
+  if (!Array.isArray(native)) throw new Error('The local CV database returned an invalid document list.');
+  const parsed: SavedResume[] = [];
+  for (const item of native) {
+    if (!item || typeof item !== 'object') throw new Error('The local CV database contains an invalid saved document.');
+    const candidate = item as Record<string, unknown>;
+    if (typeof candidate.id !== 'string' || typeof candidate.title !== 'string' ||
+        typeof candidate.updatedAt !== 'string' || !candidate.document || typeof candidate.document !== 'object' ||
+        Array.isArray(candidate.document) || typeof (candidate.document as Record<string, unknown>).id !== 'string') {
+      throw new Error('The local CV database contains an incomplete saved document. No data was replaced.');
     }
+    const document = candidate.document as ResumeDocument;
+    if (candidate.id !== document.id) throw new Error('A saved document has mismatched identifiers. No data was replaced.');
+    parsed.push({ id: candidate.id, title: candidate.title, updatedAt: candidate.updatedAt, document });
   }
-  return loadResumes();
+  try { localStorage.setItem(KEY, JSON.stringify(parsed)); } catch { /* SQLite remains the source of truth on desktop. */ }
+  return parsed;
 }
 
 export function saveResumes(resumes: SavedResume[]): Promise<void> {
@@ -78,10 +89,15 @@ export function saveSetting(key: string, value: string): Promise<void> {
 
 export async function loadSetting(key: string): Promise<string | null> {
   if (isTauri()) {
-    try {
-      const value = await invoke<string | null>('load_setting', { key });
-      if (value !== null) { try { localStorage.setItem(key, value); } catch { /* Native storage remains available. */ } return value; }
-    } catch (error) { console.error('Could not load setting from SQLite.', error); }
+    // A missing native setting is a real null, not permission to restore a possibly
+    // stale browser value over it. Native read failures must be visible to the caller.
+    const value = await invoke<string | null>('load_setting', { key });
+    if (value === null) {
+      try { localStorage.removeItem(key); } catch { /* SQLite remains authoritative. */ }
+    } else {
+      try { localStorage.setItem(key, value); } catch { /* SQLite remains authoritative. */ }
+    }
+    return value;
   }
   try { return localStorage.getItem(key); } catch { return null; }
 }
