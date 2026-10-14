@@ -197,10 +197,12 @@ button{touch-action:manipulation}
   .tips-modal,.onboarding-modal{width:100%;max-width:100%;box-sizing:border-box}
 }
 @media(max-width:360px){
-  .mobile-brand-mark{flex-basis:30px;width:30px;height:30px}
-  .topbar{gap:7px;padding-inline:8px}
-  .breadcrumbs strong{max-width:31vw;font-size:12px}
-  .top-actions .button-primary{max-width:38vw;padding:8px;font-size:10px}
+  .mobile-brand-mark{flex-basis:28px;width:28px;height:28px}
+  .topbar{gap:5px;padding-inline:6px}
+  .breadcrumbs strong{max-width:26vw;font-size:11px}
+  .language-select{min-width:46px;max-width:50px;font-size:9px}
+  .top-actions{gap:2px}
+  .top-actions .button-primary{max-width:32vw;padding:7px 6px;font-size:9px;gap:3px}
   .template-grid{grid-template-columns:minmax(0,1fr)}
   .template-thumb{height:190px}
   .editor-panel{padding-inline:10px}
