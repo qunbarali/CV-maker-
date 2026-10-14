@@ -77,26 +77,6 @@ async function waitForExportLayout(element: HTMLElement): Promise<{ width: numbe
   };
 }
 
-function assertRenderedContent(image: HTMLImageElement): void {
-  if (!image.naturalWidth || !image.naturalHeight) {
-    throw new Error('The resume preview could not be rendered. No PDF was exported.');
-  }
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.min(image.naturalWidth, 320);
-  canvas.height = Math.min(image.naturalHeight, 320);
-  const context = canvas.getContext('2d', { willReadFrequently: true });
-  if (!context) throw new Error('Could not validate the rendered resume. No PDF was exported.');
-  context.drawImage(image, 0, 0, canvas.width, canvas.height);
-  const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-  let visiblePixels = 0;
-  for (let i = 0; i < pixels.length; i += 4) {
-    if (pixels[i + 3] > 20 && (pixels[i] < 238 || pixels[i + 1] < 238 || pixels[i + 2] < 238)) {
-      if (++visiblePixels >= 12) return;
-    }
-  }
-  throw new Error('The PDF export was stopped because the captured resume appears blank. Reopen the preview and try again.');
-}
-
 export async function exportPdf(resume: ResumeDocument) {
   // Build a real text PDF from the resume data. Do not render/capture the preview
   // or embed a PNG/JPEG: selectable text stays sharp at any zoom and is searchable.
