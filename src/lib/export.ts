@@ -4,6 +4,7 @@ import { share } from '@vnidrop/tauri-plugin-share';
 import { jsPDF } from 'jspdf';
 import { toJpeg, toPng } from 'html-to-image';
 import type { ResumeDocument } from '../types/resume';
+import { templates } from '../templates/registry';
 import { safeFilename } from './storage';
 
 async function downloadBlob(blob: Blob, filename: string) {
@@ -85,6 +86,10 @@ export async function exportPdf(resume: ResumeDocument) {
   const pageHeight = pdf.internal.pageSize.getHeight();
   const margin = Math.max(12, Math.min(24, Number(resume.design?.marginMm) || 16));
   const contentWidth = pageWidth - margin * 2;
+  const selectedTemplate = templates.find(template => template.id === resume.templateId) ?? templates[0];
+  const hasPhoto = Boolean(selectedTemplate?.photo && resume.personal.photoDataUrl);
+  const photoSize = hasPhoto ? 31 : 0;
+  const headerTextWidth = contentWidth - (hasPhoto ? photoSize + 7 : 0);
   const bottom = pageHeight - margin;
   const accent = /^#[0-9a-f]{6}$/i.test(resume.design?.accentColor || '') ? resume.design.accentColor : '#145b73';
   const rgb = [parseInt(accent.slice(1, 3), 16), parseInt(accent.slice(3, 5), 16), parseInt(accent.slice(5, 7), 16)] as const;
@@ -97,14 +102,14 @@ export async function exportPdf(resume: ResumeDocument) {
       y = margin;
     }
   };
-  const addWrapped = (value: string, options: { size?: number; bold?: boolean; color?: [number, number, number]; indent?: number; gapAfter?: number } = {}) => {
+  const addWrapped = (value: string, options: { size?: number; bold?: boolean; color?: [number, number, number]; indent?: number; gapAfter?: number; maxWidth?: number } = {}) => {
     const text = value.trim();
     if (!text) return;
     const size = options.size ?? baseFont;
     const indent = options.indent ?? 0;
     pdf.setFont('helvetica', options.bold ? 'bold' : 'normal');
     pdf.setFontSize(size);
-    const lines = pdf.splitTextToSize(text, contentWidth - indent) as string[];
+    const lines = pdf.splitTextToSize(text, (options.maxWidth ?? contentWidth) - indent) as string[];
     const lineHeight = size * 0.42 * (Number(resume.design?.lineSpacing) || 1.25);
     for (const line of lines) {
       ensureSpace(lineHeight);
@@ -130,10 +135,22 @@ export async function exportPdf(resume: ResumeDocument) {
     if (date) addWrapped(date, { size: Math.max(8, baseFont - 1), color: [95, 101, 112], gapAfter: 1 });
   };
 
-  addWrapped(resume.personal.fullName || 'Your Name', { size: 22, bold: true, color: [...rgb] as [number, number, number], gapAfter: 1.5 });
-  if (resume.personal.headline) addWrapped(resume.personal.headline, { size: 12, bold: true, gapAfter: 2 });
+  if (hasPhoto && resume.personal.photoDataUrl) {
+    try {
+      const photoType = resume.personal.photoDataUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+      const photoX = pageWidth - margin - photoSize;
+      pdf.addImage(resume.personal.photoDataUrl, photoType, photoX, y, photoSize, photoSize, 'profile-photo', 'MEDIUM');
+    } catch {
+      // An invalid/unsupported photo should never prevent the text resume exporting.
+    }
+  }
+  const headerOptions = hasPhoto ? { maxWidth: headerTextWidth } : {};
+  const headerStartY = y;
+  addWrapped(resume.personal.fullName || 'Your Name', { size: 22, bold: true, color: [...rgb] as [number, number, number], gapAfter: 1.5, ...headerOptions });
+  if (resume.personal.headline) addWrapped(resume.personal.headline, { size: 12, bold: true, gapAfter: 2, ...headerOptions });
   const contact = [resume.personal.email, resume.personal.phone, resume.personal.location, resume.personal.website].filter(Boolean).join('  |  ');
-  if (contact) addWrapped(contact, { size: 8.5, color: [82, 88, 98], gapAfter: 3 });
+  if (contact) addWrapped(contact, { size: 8.5, color: [82, 88, 98], gapAfter: 3, ...headerOptions });
+  if (hasPhoto) y = Math.max(y, headerStartY + photoSize + 3);
 
   const addSummary = () => { if (resume.summary.trim()) { addSection('Professional Summary'); addWrapped(resume.summary); } };
   const addExperience = () => {
