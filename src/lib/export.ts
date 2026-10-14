@@ -26,13 +26,13 @@ export async function exportDocx(resume: ResumeDocument) {
       children.push(new Paragraph({ children: [new TextRun({ text: item.role, bold: true }), new TextRun({ text: ` — ${item.company}`, italics: true })] }));
       const dates = `${item.startDate || ''} – ${item.current ? 'Present' : item.endDate || ''}`;
       if (dates.trim() !== '–') children.push(new Paragraph({ children: [new TextRun({ text: dates, color: '666666', size: 18 })] }));
-      for (const bullet of item.bullets.filter(Boolean)) children.push(new Paragraph({ text: bullet, bullet: { indent: 360 }, spacing: { after: 50 } }));
+      for (const bullet of item.bullets.filter(Boolean)) children.push(new Paragraph({ text: bullet, bullet: { level: 0 }, spacing: { after: 50 } }));
     }
   }
   if (resume.education.length) { heading('Education'); for (const item of resume.education) { children.push(new Paragraph({ children: [new TextRun({ text: item.qualification, bold: true }), new TextRun({ text: ` — ${item.institution}` })] })); if (item.details) children.push(new Paragraph(item.details)); } }
   if (resume.skills.length) { heading('Skills'); children.push(new Paragraph(resume.skills.map(s => s.name).filter(Boolean).join(' • '))); }
   if (resume.projects.length) { heading('Projects'); for (const item of resume.projects) { children.push(new Paragraph({ children: [new TextRun({ text: item.name, bold: true })] })); if (item.description) children.push(new Paragraph(item.description)); } }
-  if (resume.certifications.length) { heading('Certifications'); for (const item of resume.certifications) children.push(new Paragraph({ text: item, bullet: { indent: 360 } })); }
+  if (resume.certifications.length) { heading('Certifications'); for (const item of resume.certifications) children.push(new Paragraph({ text: item, bullet: { level: 0 } })); }
   if (resume.languages.length) { heading('Languages'); children.push(new Paragraph(resume.languages.join(' • '))); }
   for (const section of resume.customSections) { heading(section.title); if (section.body) children.push(new Paragraph(section.body)); }
   const doc = new Document({ creator: 'CV Maker', title: resume.title, description: 'Offline CV Maker export', sections: [{ properties: { page: { margin: { top: 720, right: 850, bottom: 720, left: 850 } } }, children }] });
@@ -56,7 +56,7 @@ export async function exportCoverLetterDocx(letter: string, title = 'Cover Lette
   const text = letter.replace(/\r\n?/g, '\n').trim();
   if (!text) throw new Error('Write a cover letter before exporting it.');
   const paragraphs = text.split(/\n\s*\n/).map(block => new Paragraph({
-    children: block.split('\n').map((line, index) => new TextRun({ text: line, break: index > 0 })),
+    children: block.split('\n').map((line, index) => new TextRun({ text: line, break: index > 0 ? 1 : 0 })),
     spacing: { after: 180, line: 360 },
   }));
   const doc = new Document({
