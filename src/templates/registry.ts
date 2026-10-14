@@ -4,7 +4,7 @@ const definitions: Array<[string,string,TemplateCategory,string,string,TemplateD
 ['classic-professional','Classic Professional','Classic','Timeless structure for established careers','#344767','single',true,false],
 ['corporate-blue','Corporate Blue','Professional','Confident, polished and easy to scan','#2457a7','single',true,false],
 ['traditional-serif','Traditional Serif','Classic','Editorial serif typography with clear hierarchy','#283b35','single',true,false],
-['modern-editorial','Modern Editorial','Modern','Expressive typography with an airy, premium feel','#6658d3','editorial',true,false],
+['modern-editorial','Modern Editorial','Modern','Expressive typography with an airy, premium feel','#145b73','editorial',true,false],
 ['modern-sidebar','Modern Sidebar','Two-column','A clear side rail for skills and contact details','#436b91','sidebar',false,false],
 ['minimal-clean','Minimal Clean','Minimal','Quiet typography and generous whitespace','#30343b','single',true,false],
 ['swiss-minimal','Swiss Minimal','Minimal','Grid-led, precise and beautifully restrained','#df593f','single',true,false],
