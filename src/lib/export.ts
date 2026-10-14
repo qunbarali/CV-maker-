@@ -64,7 +64,7 @@ export async function exportPdf(resume: ResumeDocument) {
 }
 
 export async function exportCoverLetterPdf(letter: string, title = 'Cover Letter') {
-  const text = letter.replace(/\\r\\n?/g, '\\n').trim();
+  const text = letter.replace(/\r\n?/g, '\n').trim();
   if (!text) throw new Error('Write a cover letter before exporting it.');
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
   const left = 20;
