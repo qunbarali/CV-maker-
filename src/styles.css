@@ -221,3 +221,13 @@ button{touch-action:manipulation}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
 }
+
+
+@media(max-width:760px){
+  .mobile-action-heading{margin:18px 0 8px;font-size:10px;font-weight:800;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+  .mobile-tool-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .mobile-action-button{display:flex;align-items:center;justify-content:flex-start;gap:8px;min-width:0;min-height:48px;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);font-size:11px;font-weight:650;text-align:left;overflow-wrap:anywhere}
+  .mobile-action-button svg{flex:0 0 auto;color:var(--purple)}
+  .mobile-action-button:disabled{opacity:.42}
+}
+@media(max-width:340px){.mobile-tool-actions{grid-template-columns:minmax(0,1fr)}}
