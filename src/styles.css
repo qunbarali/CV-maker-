@@ -120,3 +120,96 @@
   .mobile-bottom-nav{padding-inline:5px}
   .mobile-bottom-nav button{font-size:8px}
 }
+
+
+/* Responsive hardening pass: fluid sizing, accessible controls, and narrow-device safeguards. */
+html{width:100%;min-width:0;scroll-padding-top:calc(76px + env(safe-area-inset-top,0px))}
+body{width:100%;min-width:0;overflow-x:clip}
+#root{width:100%;min-width:0;min-height:100vh;min-height:100dvh}
+img,svg,video,canvas{max-width:100%}
+input,textarea,select,button{max-width:100%}
+button{touch-action:manipulation}
+:where(button,a,input,textarea,select,[tabindex]):focus-visible{outline:3px solid color-mix(in srgb,var(--purple) 65%,white);outline-offset:2px}
+.app,.main-area,.editor-workspace,.editor-panel,.preview-panel,.gallery-page,.tool-page,.cover-layout,.ats-layout,.phrase-grid,.template-grid,.panel-card{min-width:0}
+.field-grid>*,.cover-layout>*,.ats-layout>*,.phrase-grid>*,.template-grid>*{min-width:0}
+.form-input,.form-textarea,.cover-textarea,.job-textarea,.field input,.field textarea,.field select,.language-row input,.custom-section input,.custom-section textarea,.skill-edit-row input,.language-select{min-width:0;max-width:100%}
+.resume-paper,.resume-paper *{overflow-wrap:anywhere;word-wrap:break-word}
+.resume-paper img{max-width:100%;height:auto}
+.modal-backdrop{overflow-y:auto;overscroll-behavior:contain}
+.tips-modal,.onboarding-modal,.design-popover{min-width:0;max-width:min(100%,560px)}
+.keyword-row,.document-row,.workspace-card,.template-card-meta,.preview-toolbar,.preview-bottom{min-width:0}
+.template-card-meta strong,.template-card-meta span,.keyword-row>span,.page-heading p,.panel-card p{overflow-wrap:anywhere}
+@media(max-width:1100px) and (min-width:761px){
+  .app{grid-template-columns:52px minmax(0,1fr)}
+  .rail{min-width:0}
+  .sidebar{display:none!important}
+  .editor-workspace{grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr)}
+  .editor-panel{padding:20px 14px}
+  .topbar{padding-inline:14px;gap:10px}
+  .breadcrumbs strong{max-width:clamp(100px,20vw,220px)}
+  .template-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .gallery-page,.tool-page{padding:22px 18px}
+  .page-heading{gap:14px}
+  .cover-layout{grid-template-columns:minmax(0,1.3fr) minmax(190px,.7fr);gap:12px}
+}
+@media(max-width:900px) and (min-width:761px){
+  .editor-workspace{grid-template-columns:minmax(0,1fr)}
+  .editor-panel{border-right:0;border-bottom:1px solid var(--line)}
+  .preview-panel{min-height:0}
+  .paper-stage{padding:18px}
+  .resume-paper{width:min(100%,560px);margin-inline:auto}
+  .ats-layout,.phrase-grid{grid-template-columns:minmax(0,1fr)}
+  .cover-layout{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:760px){
+  body{overscroll-behavior-x:none}
+  .app{width:100%;min-width:0}
+  .topbar,.top-actions,.breadcrumbs{min-width:0}
+  .top-actions{flex:0 0 auto}
+  .top-actions .button-primary{max-width:42vw;overflow:hidden;text-overflow:ellipsis}
+  .editor-heading,.form-title,.panel-title{min-width:0;flex-wrap:wrap}
+  .form-title>*,.panel-title>*{min-width:0}
+  .field-grid,.skill-edit-row,.language-row,.custom-section,.cover-layout,.ats-layout,.phrase-grid{min-width:0;max-width:100%}
+  .field input,.field textarea,.field select,.form-input,.form-textarea,.cover-textarea,.job-textarea,.custom-section input,.custom-section textarea,.language-row input,.skill-edit-row input{font-size:16px;max-width:100%}
+  .section-tabs{max-width:100%;overscroll-behavior-x:contain}
+  .category-row{max-width:calc(100% + 28px);overscroll-behavior-x:contain}
+  .template-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .template-card{width:100%;min-width:0}
+  .template-thumb{min-width:0}
+  .mini-page{max-width:100%}
+  .preview-toolbar{gap:8px;flex-wrap:wrap}
+  .preview-toolbar>*{min-width:0;max-width:100%}
+  .preview-bottom{flex-wrap:wrap}
+  .preview-bottom>div{flex:1 1 140px}
+  .preview-bottom .button{flex:0 1 auto}
+  .ats-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .keyword-row{gap:8px;grid-template-columns:22px minmax(0,1fr) auto}
+  .mobile-bottom-nav{padding-left:max(6px,env(safe-area-inset-left,0px));padding-right:max(6px,env(safe-area-inset-right,0px))}
+  .mobile-bottom-nav button{overflow:hidden}
+  .mobile-bottom-nav button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .modal-backdrop{padding-left:max(12px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px))}
+  .tips-modal,.onboarding-modal{width:100%;max-width:100%;box-sizing:border-box}
+}
+@media(max-width:360px){
+  .mobile-brand-mark{flex-basis:30px;width:30px;height:30px}
+  .topbar{gap:7px;padding-inline:8px}
+  .breadcrumbs strong{max-width:31vw;font-size:12px}
+  .top-actions .button-primary{max-width:38vw;padding:8px;font-size:10px}
+  .template-grid{grid-template-columns:minmax(0,1fr)}
+  .template-thumb{height:190px}
+  .editor-panel{padding-inline:10px}
+  .page-heading h2,.editor-heading h2{font-size:21px}
+  .mobile-bottom-nav{gap:0;padding-inline:3px}
+  .mobile-bottom-nav button{font-size:8px;gap:4px}
+}
+@media(orientation:landscape) and (max-height:500px) and (max-width:900px){
+  .mobile-bottom-nav{position:sticky;bottom:auto;order:10}
+  .app{padding-bottom:0}
+  .topbar{position:relative;top:auto}
+  .mobile-editor-switch,.preview-toolbar{position:relative;top:auto}
+  .modal-backdrop{align-items:flex-start}
+  .tips-modal,.onboarding-modal{max-height:calc(100dvh - 24px);overflow-y:auto}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
