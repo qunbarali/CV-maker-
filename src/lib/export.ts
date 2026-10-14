@@ -33,45 +33,92 @@ function mimeForFilename(filename: string) {
 }
 
 export async function exportPdf(resume: ResumeDocument) {
-  const node = document.querySelector<HTMLElement>('.resume-paper');
-  if (!node) throw new Error('Resume preview is not available. Open the resume editor first.');
-  const dataUrl = await toPng(node, {
-    pixelRatio: 1.5,
-    cacheBust: false,
-    backgroundColor: '#ffffff',
-    skipAutoScale: false,
-  });
-  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error('Could not render the resume preview for PDF export.'));
-    img.src = dataUrl;
-  });
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
-  const margin = 10;
-  const pageWidth = 210 - margin * 2;
-  const pageHeight = 297 - margin * 2;
-  const pagePixelHeight = Math.max(1, Math.floor(image.width * pageHeight / pageWidth));
-  const pageCount = Math.max(1, Math.ceil(image.height / pagePixelHeight));
-  for (let page = 0; page < pageCount; page++) {
-    if (page > 0) pdf.addPage('a4', 'portrait');
-    // Crop each page slice before embedding it so page boundaries do not overlap.
-    const sourceY = page * pagePixelHeight;
-    const sliceHeight = Math.min(pagePixelHeight, image.height - sourceY);
-    const canvas = document.createElement('canvas');
-    canvas.width = image.width;
-    canvas.height = sliceHeight;
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error('Could not prepare a page for PDF export.');
-    context.fillStyle = '#ffffff';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(image, 0, sourceY, image.width, sliceHeight, 0, 0, image.width, sliceHeight);
-    const pageImage = canvas.toDataURL('image/png');
-    const sliceHeightMm = pageWidth * sliceHeight / image.width;
-    pdf.addImage(pageImage, 'PNG', margin, margin, pageWidth, sliceHeightMm, undefined, 'FAST');
+  const source = document.querySelector<HTMLElement>('.resume-paper');
+  if (!source) throw new Error('Resume preview is not available. Open the resume editor first.');
+
+  // Capture an isolated, visible A4-width clone. On Android the live preview is
+  // often hidden while the user edits; rasterizing that hidden tree creates a blank PDF.
+  const clone = source.cloneNode(true) as HTMLElement;
+  const computed = window.getComputedStyle(source);
+  for (const property of ['--accent', '--resume-font-size', '--resume-margin', '--resume-font']) {
+    const value = computed.getPropertyValue(property).trim();
+    if (value) clone.style.setProperty(property, value);
   }
-  const filename = `${safeFilename(resume.title)}.pdf`;
-  await downloadBlob(pdf.output('blob'), filename);
+  Object.assign(clone.style, {
+    position: 'fixed',
+    left: '-100000px',
+    top: '0',
+    zIndex: '-1',
+    margin: '0',
+    transform: 'none',
+    boxShadow: 'none',
+    borderRadius: '0',
+    background: '#ffffff',
+    color: '#252a36',
+    overflow: 'visible',
+  });
+  clone.style.setProperty('width', '794px', 'important');
+  clone.style.setProperty('max-width', 'none', 'important');
+  clone.style.setProperty('min-height', '0', 'important');
+  clone.style.setProperty('height', 'auto', 'important');
+  clone.style.setProperty('aspect-ratio', 'auto', 'important');
+  clone.style.setProperty('overflow', 'visible', 'important');
+  clone.style.setProperty('box-sizing', 'border-box', 'important');
+  clone.querySelectorAll<HTMLElement>('.layout-sidebar, .resume-sidebar-layout, .resume-timeline-layout').forEach(element => {
+    element.style.setProperty('min-height', '0', 'important');
+    element.style.setProperty('height', 'auto', 'important');
+    element.style.setProperty('overflow', 'visible', 'important');
+  });
+  document.body.appendChild(clone);
+
+  try {
+    if (document.fonts?.ready) await document.fonts.ready;
+    await new Promise<void>(resolve => window.requestAnimationFrame(() => resolve()));
+    const dataUrl = await toPng(clone, {
+      width: clone.scrollWidth || 794,
+      height: clone.scrollHeight,
+      pixelRatio: 1.5,
+      cacheBust: false,
+      backgroundColor: '#ffffff',
+      skipAutoScale: false,
+    });
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Could not render the resume preview for PDF export.'));
+      img.src = dataUrl;
+    });
+    if (!image.width || !image.height) throw new Error('The resume preview has no printable content.');
+
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+    const margin = 10;
+    const pageWidth = 210 - margin * 2;
+    const pageHeight = 297 - margin * 2;
+    const pagePixelHeight = Math.max(1, Math.floor(image.width * pageHeight / pageWidth));
+    // Use the captured content height, not an assumed A4 canvas height, so short
+    // resumes stay on one page and long resumes get only the pages they need.
+    const pageCount = Math.max(1, Math.ceil(image.height / pagePixelHeight));
+    for (let page = 0; page < pageCount; page++) {
+      if (page > 0) pdf.addPage('a4', 'portrait');
+      const sourceY = page * pagePixelHeight;
+      const sliceHeight = Math.min(pagePixelHeight, image.height - sourceY);
+      if (sliceHeight <= 0) continue;
+      const canvas = document.createElement('canvas');
+      canvas.width = image.width;
+      canvas.height = sliceHeight;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Could not prepare a page for PDF export.');
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.drawImage(image, 0, sourceY, image.width, sliceHeight, 0, 0, image.width, sliceHeight);
+      const pageImage = canvas.toDataURL('image/png');
+      const sliceHeightMm = pageWidth * sliceHeight / image.width;
+      pdf.addImage(pageImage, 'PNG', margin, margin, pageWidth, sliceHeightMm, undefined, 'FAST');
+    }
+    await downloadBlob(pdf.output('blob'), `${safeFilename(resume.title)}.pdf`);
+  } finally {
+    clone.remove();
+  }
 }
 
 export async function exportCoverLetterPdf(letter: string, title = 'Cover Letter') {
